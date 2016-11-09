@@ -9,6 +9,7 @@ import java.util.ArrayList;
 
 import test.lxy.com.demo.KLineBean;
 import test.lxy.com.demo.MinutesBean;
+import test.lxy.com.demo.bean.FSbean;
 
 public class DataParse {
     private ArrayList<MinutesBean> datas = new ArrayList<>();
@@ -21,21 +22,27 @@ public class DataParse {
     private int decreasingColor;
     private int increasingColor;
     private String stockExchange;
-    private SparseArray<String> xValuesLabel=new SparseArray<>();
+    private SparseArray<String> xValuesLabel = new SparseArray<>();
     private int firstDay = 10;
 
+
+    //离线测试方法
+   /*
     public void parseMinutes(JSONObject object) {
+
         JSONArray jsonArray = object.optJSONObject("data").optJSONObject(code).optJSONObject("data").optJSONArray("data");
+
         String date = object.optJSONObject("data").optJSONObject(code).optJSONObject("data").optString("date");
         if (date.length() == 0) {
             return;
         }
-        /*数据解析依照自己需求来定，如果服务器直接返回百分比数据，则不需要客户端进行计算*/
+        *//*数据解析依照自己需求来定，如果服务器直接返回百分比数据，则不需要客户端进行计算*//*
+        //昨收  作为基准线
         baseValue = (float) object.optJSONObject("data").optJSONObject(code).optJSONObject("qt").optJSONArray(code).optDouble(4);
-        System.out.println("55555555555=======basevalue======"+baseValue);
+
         int count = jsonArray.length();
         for (int i = 0; i < count; i++) {
-            String[] t = jsonArray.optString(i).split(" ");/*  "0930 9.50 4707",*/
+            String[] t = jsonArray.optString(i).split(" ");*//*  "0930 9.50 4707",*//*
             MinutesBean minutesData = new MinutesBean();
             minutesData.time = t[0].substring(0, 2) + ":" + t[0].substring(2);
             minutesData.cjprice = Float.parseFloat(t[1]);
@@ -57,6 +64,47 @@ public class DataParse {
             }
             volmax = Math.max(minutesData.cjnum, volmax);
             datas.add(minutesData);
+        }
+
+        if (permaxmin == 0) {
+            permaxmin = baseValue * 0.02f;
+        }
+    }
+*/
+
+    /**
+     * 解析gdd 服务器返回的数据,分时图用
+     */
+    public void parseMinutesData(ArrayList<FSbean> list) {
+
+        //获取昨日收盘价 baseValue
+        baseValue = 9.07f;
+        int count = list.size();//
+
+        for (int i = 0; i < count; i++) {
+            MinutesBean minutesData = new MinutesBean();
+            FSbean bean = list.get(i);
+            minutesData.time = bean.time;
+            minutesData.cjprice = bean.price;//成交价
+
+            if (i != 0) {
+                minutesData.cjnum = bean.volume;
+                minutesData.total = minutesData.cjnum * minutesData.cjprice + datas.get(i - 1).total;
+                minutesData.avprice = (minutesData.total) / bean.volume;
+            } else {
+                minutesData.cjnum = bean.volume;//成交量
+                minutesData.avprice = minutesData.cjprice;
+                minutesData.total = minutesData.cjnum * minutesData.cjprice;//交易额
+            }
+            minutesData.cha = minutesData.cjprice - baseValue;//6.04 差值
+            minutesData.per = (minutesData.cha / baseValue);//10.04  差值百分比
+            double cha = minutesData.cjprice - baseValue;//6.03999  差值
+            if (Math.abs(cha) > permaxmin) {//6.03999>6.04
+                permaxmin = (float) Math.abs(cha);//取最大差值并赋值给permaxmin，该值越大，震荡越小
+            }
+            volmax = Math.max(minutesData.cjnum, volmax);//成交量最大值
+            datas.add(minutesData);
+
         }
 
         if (permaxmin == 0) {
@@ -116,6 +164,7 @@ public class DataParse {
     public ArrayList<KLineBean> getKLineDatas() {
         return kDatas;
     }
+
     public SparseArray<String> getXValuesLabel() {
         return xValuesLabel;
     }

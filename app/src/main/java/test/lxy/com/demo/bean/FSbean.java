@@ -10,14 +10,10 @@ import java.util.List;
 public class FSbean {
 
     public String time;
-    public double open;
-    public double high;
-    public double low;
-    public double close;
+    public float price;
     public int volume;
     public int balance;
+    public int direction;
     public ArrayList<Integer> fundflow;
     public ArrayList<Integer> BSPressure;
-
-
 }

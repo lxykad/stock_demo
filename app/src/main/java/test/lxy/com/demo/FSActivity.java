@@ -50,7 +50,7 @@ public class FSActivity extends AppCompatActivity {
 
     MyXAxis xAxisLine;
     MyYAxis axisRightLine;
-    MyYAxis axisLeftLine;
+    MyYAxis axisLeftLine;//x轴
     BarDataSet barDataSet;
 
     MyXAxis xAxisBar;
@@ -68,16 +68,14 @@ public class FSActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_kx);
 
+        mData = new DataParse();
         initChart();
         //开盘时间
-        stringSparseArray = setXLabels();
+        //stringSparseArray = setXLabels();
 
         //获取服务器数据
-         //loadDataFromServer();
+        loadDataFromServer();
 
-        getOffLineData();
-
-        //
         lineChart.setOnChartValueSelectedListener(new OnChartValueSelectedListener() {
             @Override
             public void onValueSelected(Entry e, int dataSetIndex, Highlight h) {
@@ -99,6 +97,7 @@ public class FSActivity extends AppCompatActivity {
 
             @Override
             public void onNothingSelected() {
+
             }
         });
 
@@ -107,7 +106,7 @@ public class FSActivity extends AppCompatActivity {
     private void loadDataFromServer() {
 
         OkHttpUtils.get()
-                .url("http://test.58caimi.com/v1/stock/timeseries/000001.SZ?lastNPoints=240")
+                .url("http://test.58caimi.com/v1/stock/tickseries/000001.SZ")
                 .build()
                 .execute(new StringCallback() {
                     @Override
@@ -117,30 +116,20 @@ public class FSActivity extends AppCompatActivity {
 
                     @Override
                     public void onResponse(String response, int id) {
-//                        Gson gson = new Gson();
-//                        ArrayList<FSbean> list = new ArrayList<>();
-//
-//                        Type type = new TypeToken<ArrayList<FSbean>>() {
-//                        }.getType();
-//                        list = gson.fromJson(response, type);
+                        Gson gson = new Gson();
+                        ArrayList<FSbean> list = new ArrayList<>();
 
-                        //setData(fSbean);
-                        mData = new DataParse();
-                        JSONObject object = null;
-                        try {
-                            object = new JSONObject(response);
-                        } catch (JSONException e) {
-                            e.printStackTrace();
+                        Type type = new TypeToken<ArrayList<FSbean>>() {
+                        }.getType();
+                        list = gson.fromJson(response, type);
 
-                        } catch (Exception e) {
+//                        ArrayList<FSbean> list2 = new ArrayList<>();
+//                        for(int i=0;i<242;i++){
+//                            list2.add(list.get(i));
+//                        }
 
-                            e.printStackTrace();
-                        }
-
-                        mData.parseMinutes(object);
+                        mData.parseMinutesData(list);
                         setData(mData);
-
-
 
                     }
                 });
@@ -151,22 +140,15 @@ public class FSActivity extends AppCompatActivity {
 
         lineChart = (MyLineChart) findViewById(R.id.line_chart_demo);
         barChart = (MyBarChart) findViewById(R.id.bar_chart_demo);
-        System.out.println("000000000=====" + barChart);
-
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
 
         lineChart.setScaleEnabled(false);
         lineChart.setDrawBorders(true);
         lineChart.setBorderWidth(1);
         lineChart.setBorderColor(getResources().getColor(R.color.minute_grayLine));
+        //lineChart.setBorderColor(Color.parseColor("#ff0000"));
         lineChart.setDescription("");
         Legend lineChartLegend = lineChart.getLegend();
-        lineChartLegend.setEnabled(false);
+        lineChartLegend.setEnabled(false);//标注说明
 
         barChart.setScaleEnabled(false);
         barChart.setDrawBorders(true);
@@ -179,24 +161,24 @@ public class FSActivity extends AppCompatActivity {
         barChartLegend.setEnabled(false);
         //x轴
         xAxisLine = lineChart.getXAxis();
-        xAxisLine.setDrawLabels(true);
-        xAxisLine.setPosition(XAxis.XAxisPosition.BOTTOM);
-        // xAxisLine.setLabelsToSkip(59);
+        xAxisLine.setDrawLabels(true);//时间标记
+        xAxisLine.setPosition(XAxis.XAxisPosition.BOTTOM);//标记在底部，默认在顶部
+        //xAxisLine.setLabelsToSkip(59);
 
 
         //左边y
         axisLeftLine = lineChart.getAxisLeft();
         /*折线图y轴左没有basevalue，调用系统的*/
-        axisLeftLine.setLabelCount(5, true);
+        axisLeftLine.setLabelCount(5, true);// 左边显示5条数据
         axisLeftLine.setDrawLabels(true);
-        axisLeftLine.setDrawGridLines(false);
+        axisLeftLine.setDrawGridLines(false);//横线不显示
         /*轴不显示 避免和border冲突*/
         axisLeftLine.setDrawAxisLine(false);
 
 
         //右边y
         axisRightLine = lineChart.getAxisRight();
-        axisRightLine.setLabelCount(2, true);
+        axisRightLine.setLabelCount(2, true);//basevalue 上下各显示几条数据
         axisRightLine.setDrawLabels(true);
         axisRightLine.setValueFormatter(new YAxisValueFormatter() {
             @Override
@@ -211,6 +193,7 @@ public class FSActivity extends AppCompatActivity {
         axisRightLine.setDrawAxisLine(false);
         //背景线
         xAxisLine.setGridColor(getResources().getColor(R.color.minute_grayLine));
+        //xAxisLine.setGridColor(Color.parseColor("#ff0000"));//时间竖线的颜色
         xAxisLine.setAxisLineColor(getResources().getColor(R.color.minute_grayLine));
         xAxisLine.setTextColor(getResources().getColor(R.color.minute_zhoutv));
         axisLeftLine.setGridColor(getResources().getColor(R.color.minute_grayLine));
@@ -249,18 +232,21 @@ public class FSActivity extends AppCompatActivity {
 
 
     private SparseArray<String> setXLabels() {
+        int count = mData.getDatas().size() - 1;
+        int i = mData.getDatas().size() / 4;
+        int j = mData.getDatas().size() - 4 * i;
+        int rest = 4 * i + j;
         SparseArray<String> xLabels = new SparseArray<>();
         xLabels.put(0, "09:30");
-        xLabels.put(60, "10:30");
-        xLabels.put(121, "11:30/13:00");
-        xLabels.put(182, "14:00");
-        xLabels.put(241, "15:00");
+        xLabels.put(i, "10:30");
+        xLabels.put(2 * i, "11:30/13:00");
+        xLabels.put(3 * i, "14:00");
+        xLabels.put(count, "15:00");
         return xLabels;
     }
 
 
     //设置分时图数据
-
 
     private void setMarkerView(DataParse mData) {
         MyLeftMarkerView leftMarkerView = new MyLeftMarkerView(FSActivity.this, R.layout.mymarkerview);
@@ -275,9 +261,11 @@ public class FSActivity extends AppCompatActivity {
 
 
     private void setData(DataParse mData) {
+        stringSparseArray = setXLabels();
+
         setMarkerView(mData);//十字坐标
         setShowLabels(stringSparseArray);//开盘时间
-        Log.e("###", mData.getDatas().size() + "ee");
+
         if (mData.getDatas().size() == 0) {
             lineChart.setNoDataText("暂无数据");
             return;
@@ -382,15 +370,17 @@ public class FSActivity extends AppCompatActivity {
         BarData barData = new BarData(getMinutesCount(), barDataSet);
         barChart.setData(barData);
 
+        //设置量表对齐
         setOffset();
-        lineChart.invalidate();//刷新图
+        //刷新图
+        lineChart.invalidate();
         barChart.invalidate();
 
 
     }
 
     public String[] getMinutesCount() {
-        return new String[242];
+        return new String[mData.getDatas().size()];
     }
 
     /*设置量表对齐*/
@@ -425,20 +415,6 @@ public class FSActivity extends AppCompatActivity {
             transRight = barRight;
         }
         barChart.setViewPortOffsets(transLeft, 5, transRight, barBottom);
-    }
-
-    private void getOffLineData() {
-        /*方便测试，加入假数据*/
-        mData = new DataParse();
-        JSONObject object = null;
-        try {
-            object = new JSONObject(ConstantTest.MINUTESURL);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        //解析 json 字符串 为 分时图 对象
-        mData.parseMinutes(object);
-        setData(mData);
     }
 
 }
